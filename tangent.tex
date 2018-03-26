@@ -1,0 +1,22 @@
+\documentclass[fleqn]{article}
+   \usepackage{amsmath,amsfonts,amssymb,amsthm,mathtools}
+   \usepackage{commath}
+   \usepackage[a4paper, total={205mm, 290mm}]{geometry}
+   \newcommand{\bb}[1] {\mathbf{#1}}
+   \newcommand{\vv}[1] {\vec{#1}}
+   \newcommand{\cross} {\times}
+\begin{document}
+$f(x,y,z) = x^2 + y^2 + z^2 -r^2 = 0$ being the equation for a sphere of radius $r$ we
+want to find some vector on the tangent plane to the sphere at $(x, y, z)$ to use
+for an up vector, however there are infinetly many such vectors.
+Projecting the ``standard'' up vector onto the tangent plane seems like a reasonable
+compromise.
+
+The gradient $\vv{n} = \nabla{f} = (2x, 2y, 2z)$ is normal to the sphere at
+$(x, y, z)$. To find the projection $Y_p$ of the Y axis $Y = (0,1,0)$ onto the tangent to the
+sphere at point $(x, y, z)$ we have
+
+$Y_p = Y - \frac{(Y \cdot \vv{n})}{\norm{\vv{n}}^2}\vv{n} =
+(-\frac{xy}{r^2}, -\frac{y^2}{r^2} + 1, -\frac{yz}{r^2})$
+
+\end{document}
