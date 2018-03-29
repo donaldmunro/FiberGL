@@ -27,7 +27,6 @@ SOFTWARE.
 #include <string>
 
 #include "OGLFiberWin.hh"
-#include <fibergl.h>
 
 class Sample: public oglfiber::OGLFiberWindow
 //============================================
@@ -78,7 +77,7 @@ public:
       Sample(title, w, h, gl_major, gl_minor, can_resize), glsl_ver(glsl_ver)
    {
       std::string ignored;
-      is_good = load_shaders(shader_dir, ignored, fragment_glsl);
+      is_good = oglutil::load_shaders(shader_dir, ignored, fragment_glsl);
       if (! is_good)
          std::cerr << "Error loading fragment shader from " << shader_dir << std::endl;
    }
@@ -106,7 +105,7 @@ public:
          Sample(title, w, h, gl_major, gl_minor, can_resize), glsl_ver(glsl_ver)
    {
       std::string ignored;
-      is_good = load_shaders(shader_dir, ignored, fragment_glsl);
+      is_good = oglutil::load_shaders(shader_dir, ignored, fragment_glsl);
       if (! is_good)
          std::cerr << "Error loading fragment shader from " << shader_dir << std::endl;
    }

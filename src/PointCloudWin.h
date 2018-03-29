@@ -32,7 +32,6 @@ SOFTWARE.
 #include <iostream>
 
 #include "OGLFiberWin.hh"
-#include <fibergl.h>
 
 //#define PCW_DEBUG_SHADER
 

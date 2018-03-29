@@ -42,8 +42,8 @@ namespace filesystem = std::filesystem;
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include "Samples.h"
 #include "tinyply.h"
+#include "OGLUtils.h"
 
 //#define BOUNDS_VERTICES 1
 
@@ -104,7 +104,7 @@ void PointCloudWin::on_initialize(const GLFWwindow *win)
    std::string vertex_glsl, fragment_glsl;
    filesystem::path dir = shader_directory / filesystem::path("axes");
    bool is_axes = true;
-   if (load_shaders(dir.string(), vertex_glsl, fragment_glsl))
+   if (oglutil::load_shaders(dir.string(), vertex_glsl, fragment_glsl))
    {
       axes_unit.program = oglutil::compile_link_shader(replace_ver(vertex_glsl.c_str(), glsl_ver),
                                                        replace_ver(fragment_glsl.c_str(), glsl_ver),
@@ -131,7 +131,7 @@ void PointCloudWin::on_initialize(const GLFWwindow *win)
    }
 
    dir = shader_directory / filesystem::path("cloud");
-   if (! load_shaders(dir.string(), vertex_glsl, fragment_glsl))
+   if (! oglutil::load_shaders(dir.string(), vertex_glsl, fragment_glsl))
    {
       std::cerr << "Error loading point cloud shaders from " << dir.string() << std::endl;
       is_good = false;

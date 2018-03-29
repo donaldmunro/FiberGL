@@ -32,6 +32,7 @@ SOFTWARE.
 #include <limits>
 #include <thread>
 #include <exception>
+#include <algorithm>
 
 namespace oglfiber
 {
@@ -79,11 +80,37 @@ namespace oglfiber
       OGLFiberExecutor::instance().running--;
    }
 
+   //Stuff that must be done on the main thread
+   void OGLFiberExecutor::setup_win(OGLFiberWindow *window)
+   //----------------------------------------------------------
+   {
+      window->parent = this;
+      std::stringstream errs;
+      if (! window->window)
+      {
+         std::cerr << errs.str() << std::endl;
+         throw std::runtime_error("Error initializing window " + window->name);
+      }
+      GLFWwindow* win = window->window.get();
+      window_lookup[win] = window;
+      glfwSetKeyCallback(win, &glfw_on_key);
+      glfwSetFramebufferSizeCallback(win, &glfw_on_size);
+      glfwSetWindowFocusCallback(win, glfw_on_focus);
+      glfwSetCursorPosCallback(win, glfw_on_cursor_position);
+      glfwSetMouseButtonCallback(win, glfw_on_button);
+      glfwSetScrollCallback(win, glfw_on_scroll_wheel);
+      glfwGetFramebufferSize(win, &window->width, &window->height);
+      glfwSetWindowCloseCallback(win, &glfw_on_close);
+   }
+
    bool OGLFiberExecutor::start(std::initializer_list<OGLFiberWindow *> windows_, bool is_threaded)
    //------------------------------------------------------------------------
    {
       for (OGLFiberWindow *window : windows_)
+      {
          windows.emplace_back(window);
+         setup_win(window);
+      }
       if (is_threaded)
          thread = std::thread(&OGLFiberExecutor::run, this);
       else
@@ -98,6 +125,8 @@ namespace oglfiber
    //---------------------------------------------------------------------------------------------------------
    {
       windows.insert(windows.end(), windows_.begin(), windows_.end());
+      std::for_each(windows.begin(), windows.end(),
+                    [this](const std::shared_ptr<OGLFiberWindow> window) { this->setup_win(window.get()); });
       if (is_threaded)
          thread = std::thread(&OGLFiberExecutor::run, this);
       else
@@ -112,24 +141,7 @@ namespace oglfiber
    {
       for (const std::shared_ptr<OGLFiberWindow>& window : windows)
       {
-         window->parent = this;
-         std::stringstream errs;
-         if (! window->window)
-         {
-            std::cerr << errs.str() << std::endl;
-            throw std::runtime_error("Error initializing window " + window->name);
-         }
          GLFWwindow* win = window->window.get();
-         window_lookup[win] = window.get();
-         glfwSetKeyCallback(win, &glfw_on_key);
-         glfwSetFramebufferSizeCallback(win, &glfw_on_size);
-         glfwSetWindowFocusCallback(win, glfw_on_focus);
-         glfwSetCursorPosCallback(win, glfw_on_cursor_position);
-         glfwSetMouseButtonCallback(win, glfw_on_button);
-         glfwSetScrollCallback(win, glfw_on_scroll_wheel);
-         glfwGetFramebufferSize(win, &window->width, &window->height);
-         glfwSetWindowCloseCallback(win, &glfw_on_close);
-
          glfwMakeContextCurrent(win);
 #ifdef USE_GLEW
          if (glewInit() != GLEW_OK)

@@ -59,8 +59,12 @@ namespace oglutil
 
    inline std::string emptys(const char *pch) { return ( (pch == nullptr) ? "" : std::string(pch) ); }
 
+   bool load_shaders(const std::string& directory, std::string& vertexShader, std::string& fragmentShader,
+                  std::string* geometryShader = nullptr, std::string* tessControlShader = nullptr,
+                  std::string* tessEvalShader = nullptr);
+
    struct OGLProgramUnit
-      //===================
+   //===================
    {
       GLuint program =GL_FALSE, vertex_shader =GL_FALSE, tess_control_shader =GL_FALSE,
             tess_eval_shader =GL_FALSE, geometry_shader =GL_FALSE, fragment_shader =GL_FALSE;

@@ -174,10 +174,22 @@ namespace oglfiber
          return instance;
       }
 
+      /*
+      is_threaded - true to run fiber in a different thread.
+      */
       bool start(std::initializer_list<OGLFiberWindow *> windows_, bool is_threaded =false);
       bool start(std::initializer_list<std::shared_ptr<OGLFiberWindow>> windows_, bool is_threaded =false);
+
       void stop() { must_stop.store(true); }
       bool is_stopping() { return must_stop.load(); };
+      void join()
+      {
+         if (thread.joinable())
+            thread.join();
+         else
+            if (main_fiber.joinable())
+               main_fiber.join();
+      }
 
    private:
       void run();
@@ -223,6 +235,8 @@ namespace oglfiber
       static const size_t MAX_KEYBUF_SIZE = 100;
 
       friend class OGLFiberWindow;
+
+      void setup_win(OGLFiberWindow *win);
    };
 }
 #endif // _POINTCLOUDWIDGET_HH_

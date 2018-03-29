@@ -25,6 +25,14 @@ SOFTWARE.
 #include <fstream>
 #include <sstream>
 #include <memory>
+#include <regex>
+#ifdef FILESYSTEM_EXPERIMENTAL
+#include <experimental/filesystem>
+namespace filesystem = std::experimental::filesystem;
+#else
+#include <filesystem>
+namespace filesystem = std::filesystem;
+#endif
 
 #ifdef USE_GLEW
 #include <GL/glew.h>
@@ -266,6 +274,87 @@ namespace oglutil
          return 0;
       }
       return program;
+   }
+
+   bool load_shaders(const std::string &directory, std::string &vertexShader, std::string &fragmentShader,
+                     std::string *geometryShader, std::string *tessControlShader,
+                     std::string *tessEvalShader)
+   //----------------------------------------------------------------------------------------------------
+   {
+      if (!filesystem::is_directory(directory))
+      {
+         std::cerr << directory << " not found or not a directory." << std::endl;
+         return false;
+      }
+      vertexShader = fragmentShader = "";
+      if (geometryShader != nullptr) *geometryShader = "";
+      if (tessControlShader != nullptr) *tessControlShader = "";
+      if (tessEvalShader != nullptr) *tessEvalShader = "";
+      const std::string shader_pattern = R"(.*\.glsl$|.*\.vert$|.*\.frag$|.*\.tess|.*\.geom)";
+      std::regex shader_regex(shader_pattern, std::regex_constants::icase);
+      std::string vertex_shader, fragment_shader, geometry_shader, tess_eval_shader, tess_control_shader;
+      for (const auto &entry : filesystem::directory_iterator(directory))
+      {
+         std::string filename = filesystem::absolute(entry.path());
+         std::string basename = entry.path().filename().string();
+         if (std::regex_match(basename, shader_regex))
+         {
+            std::transform(basename.begin(), basename.end(), basename.begin(), ::tolower);
+            std::string ext = entry.path().extension();
+            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+            if ((ext == ".vert") || (basename.find("vert") != std::string::npos))
+               vertex_shader = filename;
+            else if ((ext == ".frag") || (basename.find("frag") != std::string::npos))
+               fragment_shader = filename;
+            else if ((ext == ".geom") || (basename.find("geom") != std::string::npos))
+               geometry_shader = filename;
+            else if ((ext == ".tess") || (basename.find("tess") != std::string::npos))
+            {
+               if (basename.find("eval") != std::string::npos)
+                  tess_eval_shader = filename;
+               else if (basename.find("cont") != std::string::npos)
+                  tess_control_shader = filename;
+               else
+                  std::cerr << "Tesselation match for eval/cont not found.(" << filename << ")" << std::endl;
+            }
+         }
+      }
+      if (!vertex_shader.empty())
+      {
+         std::ifstream ifs(vertex_shader);
+         if (!ifs.good()) return false;
+         vertexShader = std::string((std::istreambuf_iterator<char>(ifs)),
+                                    (std::istreambuf_iterator<char>()));
+      }
+      if (!fragment_shader.empty())
+      {
+         std::ifstream ifs(fragment_shader);
+         if (!ifs.good()) return false;
+         fragmentShader = std::string((std::istreambuf_iterator<char>(ifs)),
+                                      (std::istreambuf_iterator<char>()));
+      }
+      if ((tessControlShader != nullptr) && (!tess_control_shader.empty()))
+      {
+         std::ifstream ifs(tess_control_shader);
+         if (!ifs.good()) return false;
+         *tessControlShader = std::string((std::istreambuf_iterator<char>(ifs)),
+                                          (std::istreambuf_iterator<char>()));
+      }
+      if ((tessEvalShader != nullptr) && (!tess_eval_shader.empty()))
+      {
+         std::ifstream ifs(tess_eval_shader);
+         if (!ifs.good()) return false;
+         *tessEvalShader = std::string((std::istreambuf_iterator<char>(ifs)),
+                                       (std::istreambuf_iterator<char>()));
+      }
+      if ((geometryShader != nullptr) && (!geometry_shader.empty()))
+      {
+         std::ifstream ifs(geometry_shader);
+         if (!ifs.good()) return false;
+         *geometryShader = std::string((std::istreambuf_iterator<char>(ifs)),
+                                       (std::istreambuf_iterator<char>()));
+      }
+      return true;
    }
 
    void OGLProgramUnit::del()
