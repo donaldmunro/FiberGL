@@ -81,7 +81,7 @@ message(STATUS "Boost Include:" "${Boost_INCLUDE_DIRS}")
 add_definitions( -DFILESYSTEM_EXPERIMENTAL )
 
 add_executable(fibergl src/fibergl.cc src/OGLUtils.cc src/OGLUtils.h src/OGLFiberWin.cc src/OGLFiberWin.hh
-                       src/tinyply.cpp src/tinyply.h/ src/Samples.cc src/Samples.h src/PointCloudWin.cc src/PointCloudWin.h src/fibergl.h)
+                       src/tinyply.cpp src/tinyply.h/ src/Samples.cc src/Samples.h src/PointCloudWin.cc src/PointCloudWin.h)
 if(USE_GLAD)
    target_compile_options( fibergl PRIVATE "-DFILESYSTEM_EXPERIMENTAL" "-DUSE_GLAD")
    target_include_directories(fibergl PUBLIC "${PROJECT_SOURCE_DIR}/src" "${GLAD_DIR}/include" "${GLM_INCLUDE_DIRS}")
