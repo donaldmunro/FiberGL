@@ -52,5 +52,7 @@ int main(int argc, char *argv[])
    penholder->set_point_size(10.0f);
    PointCloudWin* bunny = new PointCloudWin("Bunny", 1024, 768, "shaders/pc/", "shaders/pc/bunny.ply", 100);
    bunny->set_r(20.0f);
-   gl_executor.start({sample1_ptr, sample2_ptr, penholder, bunny}, false);
+   PointCloudWin* dode = new PointCloudWin("Dodecahedron", 1024, 768, "shaders/pc/", "shaders/pc/dodecahedron.ply");
+   dode->set_point_size(15.0f);
+   gl_executor.start({sample1_ptr, sample2_ptr, dode, penholder, bunny}, false);
 }

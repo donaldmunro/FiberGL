@@ -302,7 +302,12 @@ bool PointCloudWin::init_axes()
    return true;
 }
 
-inline void _push_vertex(GLfloat*& vertices, GLfloat x, GLfloat y, GLfloat z) { *vertices++ = x; *vertices++ = y; *vertices++ = z; }
+inline void _push_vertex(GLfloat*& vertices, GLfloat x, GLfloat y, GLfloat z, GLfloat w,
+                         GLfloat r, GLfloat g, GLfloat b, GLfloat a)
+{
+   *vertices++ = x; *vertices++ = y; *vertices++ = z; *vertices++ = w;
+   *vertices++ = r; *vertices++ = g; *vertices++ = b; *vertices++ = a;
+}
 
 std::unique_ptr<GLfloat[]> PointCloudWin::load_pointcloud()
 //---------------------------------------------------------
@@ -311,25 +316,52 @@ std::unique_ptr<GLfloat[]> PointCloudWin::load_pointcloud()
    std::ifstream ifs(plyfile.c_str(), std::ios::binary);
    if (ifs.fail())
    {
-      std::stringstream ss;
-      ss << "Could not open pointcloud file " << plyfile.filename();
-      std::cerr << ss.str().c_str() << std::endl;
+      std::cerr << "Could not open pointcloud file " << plyfile.filename() << std::endl;;
       initialised_pc = false;
       return nullptr;
    }
    tinyply::PlyFile file;
-   std::shared_ptr<tinyply::PlyData> verts;
+   std::shared_ptr<tinyply::PlyData> verts, colors;
    try
    {
-      file.parse_header(ifs);
+      if (! file.parse_header(ifs))
+      {
+         std::cerr << "Could not parse pointcloud file header for " << plyfile.filename() << std::endl;
+         initialised_pc = false;
+         return nullptr;
+      }
+      for (auto e : file.get_elements())
+      {
+         if (e.name == "vertex")
+         {
+            for (auto p : e.properties)
+            {
+               if ( (p.name == "red") || (p.name == "green") || (p.name == "blue") )
+                  is_color_pointcloud = true;
+               if (p.name == "alpha")
+                  is_alpha_pointcloud = true;
+            }
+         }
+      }
+
       verts = file.request_properties_from_element("vertex", { "x", "y", "z" });
+      try
+      {
+         if (is_alpha_pointcloud)
+            colors = file.request_properties_from_element("vertex", {"red", "green", "blue", "alpha"});
+         else
+            colors = file.request_properties_from_element("vertex", {"red", "green", "blue"});
+      }
+      catch (const std::exception & e)
+      {
+         is_color_pointcloud = is_alpha_pointcloud = false;
+         std::cerr << "Could not read colors from pointcloud file " << plyfile.filename() << std::endl;
+      }
       file.read(ifs);
    }
    catch (const std::exception & e)
    {
-      std::stringstream ss;
-      ss << "Exception: " << e.what() << " reading ply file " << plyfile.filename();
-      std::cerr << ss.str().c_str() << std::endl;
+      std::cerr << "Exception: " << e.what() << " reading ply file " << plyfile.filename() << std::endl;
       initialised_pc = false;
       return nullptr;
    }
@@ -341,6 +373,8 @@ std::unique_ptr<GLfloat[]> PointCloudWin::load_pointcloud()
       initialised_pc = false;
       return nullptr;
    }
+   if ( (! colors) || (colors->count == 0) )
+      is_color_pointcloud = is_alpha_pointcloud = false;
 
 //   size_t bytes = verts->buffer.size_bytes();
 #ifdef BOUNDS_VERTICES
@@ -348,17 +382,25 @@ std::unique_ptr<GLfloat[]> PointCloudWin::load_pointcloud()
 #else
    count = verts->count;
 #endif
-//   vertices.resize(count); std::memcpy(vertices.data(), verts->buffer.get(), bytes);
+   struct RGB { u_char r,g,b; };
+   struct RGBA { u_char r,g,b,a; };
    std::vector<GLfloat> Xs, Ys, Zs;
    auto vertdata = reinterpret_cast<float3 *>(verts->buffer.get());
-//   glm::mat3 opencv2opengl = glm::mat3(glm::vec3(1.0, 0.0, 0.0),
-//                                       glm::vec3(0.0, -1.0, 0.0),
-//                                       glm::vec3(0.0, 0.0, -1.0));
-////                                       glm::vec4(0.0, 0.0, 0.0, 1.0));
-   std::unique_ptr<GLfloat[]> vertices(new GLfloat[count*3]);
+   RGB* RGBdata = nullptr;
+   RGBA* RGBAdata = nullptr;
+   if (is_color_pointcloud)
+   {
+      if (is_alpha_pointcloud)
+         RGBAdata = reinterpret_cast<RGBA *>(colors->buffer.get());
+      else
+         RGBdata = reinterpret_cast<RGB *>(colors->buffer.get());
+   }
+
+   const size_t buffer_size = count*8;
+   std::unique_ptr<GLfloat[]> vertices(new GLfloat[buffer_size]);
    GLfloat *vertices_ptr = vertices.get();
 #ifndef NDEBUG
-   GLfloat *vertices_ptr_end = &vertices_ptr[count*3];
+   GLfloat *vertices_ptr_end = &vertices_ptr[buffer_size];
 #endif
    const GLfloat flip = (yz_flip) ? -1 : 1;
    double totalx = 0, totaly = 0, totalz = 0;
@@ -372,13 +414,39 @@ std::unique_ptr<GLfloat[]> PointCloudWin::load_pointcloud()
       Ys.resize(verts->count);
       Zs.resize(verts->count);
    }
+   GLfloat x, y, z, red =1.0f, green =0, blue =0, alpha =1.0f;
    for (size_t i=0; i<count; i++)
    {
       float3 item = vertdata[i];
-      const GLfloat x = item.x * scale;
-      const GLfloat y = item.y * scale*flip;
-      const GLfloat z = item.z * scale*flip;
-      _push_vertex(vertices_ptr, x, y, z);
+      x = item.x * scale;
+      y = item.y * scale*flip;
+      z = item.z * scale*flip;
+      if ( (is_color_pointcloud) && (i < colors->count) )
+      {
+         if (is_color_pointcloud)
+         {
+            if (is_alpha_pointcloud)
+            {
+               red = static_cast<float>(RGBAdata[i].r) / 255.0f;
+               green = static_cast<float>(RGBAdata[i].g) / 255.0f;
+               blue = static_cast<float>(RGBAdata[i].b) / 255.0f;
+               alpha = static_cast<float>(RGBAdata[i].a) / 255.0f;
+            }
+            else
+            {
+               red = static_cast<float>(RGBdata[i].r) / 255.0f;
+               green = static_cast<float>(RGBdata[i].g) / 255.0f;
+               blue = static_cast<float>(RGBdata[i].b) / 255.0f;
+               alpha = 1.0f;
+            }
+         }
+      }
+      else
+      {
+         red = alpha = 1.0f;
+         green = blue = 0;
+      }
+      _push_vertex(vertices_ptr, x, y, z, 1, red, green, blue, alpha);
 #ifdef PCW_DEBUG_SHADER
       _vertices_.emplace_back(x, y, z);
 #endif
@@ -388,7 +456,7 @@ std::unique_ptr<GLfloat[]> PointCloudWin::load_pointcloud()
          Ys[i] = y;
          Zs[i] = z;
       }
-      std::cout << std::fixed << std::setprecision(5) << x << ", " << y << ", " << z << std::endl;
+      // std::cout << std::fixed << std::setprecision(5) << x << ", " << y << ", " << z << std::endl;
 
       if (x < minx) minx = x;
       if (x > maxx) maxx = x;
@@ -452,14 +520,17 @@ bool PointCloudWin::init_pointcloud()
    oglutil::clearGLErrors();
    glGenBuffers(1, &pointcloud_unit("VBO_VERTICES"));
    glBindBuffer(GL_ARRAY_BUFFER, pointcloud_unit("VBO_VERTICES"));
-   glBufferData(GL_ARRAY_BUFFER, count*3*sizeof(GLfloat), vertices.get(), GL_STATIC_DRAW);
+   glBufferData(GL_ARRAY_BUFFER, count*8*sizeof(GLfloat), vertices.get(), GL_DYNAMIC_DRAW);
    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
    glGenVertexArrays(1, &pointcloud_unit("VAO_VERTICES"));
    glBindVertexArray(pointcloud_unit("VAO_VERTICES"));
    glBindBuffer(GL_ARRAY_BUFFER, pointcloud_unit("VBO_VERTICES"));
    glEnableVertexAttribArray(0);
-   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+   glEnableVertexAttribArray (1);
+   GLsizei stride = sizeof(GLfloat) * (4 + 4);
+   glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, 0);
+   glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<const void *>(4 * sizeof (GLfloat)));
    glBindVertexArray(0);
    std::stringstream errs;
    GLuint err;
@@ -502,9 +573,9 @@ void PointCloudWin::cartesian()
    float r2 = r*r;
    tangent = glm::normalize(glm::vec3(-x*y/r2, -y*y/r2 + 1, -y*z/r2));
 
-   std::cout << std::fixed << std::setprecision(5) << "location: ("
-             << r << ", " << glm::degrees(theta) << ", " << glm::degrees(phi) << ") = ("
-             << x << ", " << y << ", " << z << ")" << std::endl;
+//    std::cout << std::fixed << std::setprecision(5) << "location: ("
+//              << r << ", " << glm::degrees(theta) << ", " << glm::degrees(phi) << ") = ("
+//              << x << ", " << y << ", " << z << ")" << std::endl;
 }
 
 void PointCloudWin::onCursorUpdate(double xpos, double ypos)

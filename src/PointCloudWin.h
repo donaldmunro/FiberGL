@@ -114,6 +114,7 @@ private:
          miny = std::numeric_limits<float>::max(), maxy = std::numeric_limits<float>::lowest(),
          minz = std::numeric_limits<float>::max(), maxz = std::numeric_limits<float>::lowest(),
          rangex =0, rangey =0, rangez =0;
+   bool is_color_pointcloud =false, is_alpha_pointcloud = false;
    float max_r = 0, r = std::numeric_limits<float>::quiet_NaN(), phi =PIf/2.0f, theta =0, maxDistance = 0;
    glm::vec3 location{0, 0, 0}, centroid{0, 0, 0}, tangent{0, 1, 0};
    glm::mat4 P;

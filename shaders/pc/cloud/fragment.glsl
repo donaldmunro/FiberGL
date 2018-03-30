@@ -1,8 +1,8 @@
 #version {{ver}} core
 //#version 440 core
 // precision mediump float;
-smooth in vec3 colour;
+smooth in vec4 colour;
 uniform vec3 color;
 
 layout(location = 0) out vec4 FragColor;
-void main() { FragColor = vec4(colour, 1); }
+void main() { FragColor = colour; }
