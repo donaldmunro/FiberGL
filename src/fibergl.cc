@@ -24,12 +24,17 @@ SOFTWARE.
 #include <fstream>
 #include <memory>
 #include <regex>
+#ifdef STD_FILESYSTEM
+#include <filesystem>
+namespace filesystem = std::filesystem;
+#endif
 #ifdef FILESYSTEM_EXPERIMENTAL
 #include <experimental/filesystem>
 namespace filesystem = std::experimental::filesystem;
-#else
-#include <filesystem>
-namespace filesystem = std::filesystem;
+#endif
+#ifdef FILESYSTEM_BOOST
+#include <boost/filesystem.hpp>
+namespace filesystem = boost::filesystem;
 #endif
 
 #include "OGLFiberWin.hh"

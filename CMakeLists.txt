@@ -5,6 +5,17 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 set(CMAKE_CXX_STANDARD 14)
 
+include(CheckIncludeFileCXX)
+if(EXISTS "/usr/include")
+   set (CMAKE_REQUIRED_INCLUDES "/usr/include")
+   check_include_file_cxx(filesystem HAVE_STD_FILESYSTEM)
+   check_include_file_cxx(experimental/filesystem HAVE_STD_EXPERIMENTAL_FILESYSTEM)
+   check_include_file_cxx(source_location HAVE_STD_LOCATION)
+   check_include_file_cxx(experimental/source_location HAVE_STD_EXPERIMENTAL_LOCATION)
+else()
+   message( FATAL_ERROR "Change CMAKE_REQUIRED_INCLUDES to your default C++ compiler include directory." )
+endif()
+
 set(DEPENDENCIES "${PROJECT_SOURCE_DIR}/libs")
 set(USE_INSTALLED_GLFW FALSE)
 set(USE_INSTALLED_GLM FALSE)

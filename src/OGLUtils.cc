@@ -26,13 +26,6 @@ SOFTWARE.
 #include <sstream>
 #include <memory>
 #include <regex>
-#ifdef FILESYSTEM_EXPERIMENTAL
-#include <experimental/filesystem>
-namespace filesystem = std::experimental::filesystem;
-#else
-#include <filesystem>
-namespace filesystem = std::filesystem;
-#endif
 
 #ifdef USE_GLEW
 #include <GL/glew.h>

@@ -50,15 +50,21 @@ SOFTWARE.
 #include <utility>
 #include <unordered_map>
 #include <queue>
-#ifdef FILESYSTEM_EXPERIMENTAL
-#include <experimental/filesystem>
-namespace filesystem = std::experimental::filesystem;
-#else
+#include <atomic>
+#include <chrono>
+
+#ifdef STD_FILESYSTEM
 #include <filesystem>
 namespace filesystem = std::filesystem;
 #endif
-#include <atomic>
-#include <chrono>
+#ifdef FILESYSTEM_EXPERIMENTAL
+#include <experimental/filesystem>
+namespace filesystem = std::experimental::filesystem;
+#endif
+#ifdef FILESYSTEM_BOOST
+#include <boost/filesystem.hpp>
+namespace filesystem = boost::filesystem;
+#endif
 
 #include <boost/fiber/all.hpp>
 
@@ -140,6 +146,7 @@ namespace oglfiber
 
    protected:
       bool is_good = false;
+      int width =-1, height =-1;
 
       virtual void onCursorUpdate(double xpos, double ypos) {}
       virtual void on_focus(bool has_focus) {}
@@ -148,7 +155,7 @@ namespace oglfiber
 
    private:
       std::string name;
-      int width =-1, height =-1, ogl_major, ogl_minor;
+      int ogl_major, ogl_minor;
       bool resizable;
       GLFWmonitor* monitor = nullptr;
       std::stringstream log;
